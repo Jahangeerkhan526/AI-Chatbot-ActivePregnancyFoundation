@@ -43,7 +43,7 @@ ${DATASET_JSON}
 `;
 
 export const runInference = async (query: string, params: { temperature: number }) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY || '' });
   
   try {
     const response = await ai.models.generateContent({
