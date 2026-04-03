@@ -239,4 +239,48 @@ export const SOURCES: Source[] = [
     label: 'This Mum Moves: Social Media Resource Pack (Jan 2023)',
     hasImages: true, // ← resource pack likely image-heavy
   },
+
+  // NEWLY ADDED SOURCES
+  { 
+  id: 'nancy-preconception', 
+  label: 'APF Preconception Resources', 
+  location: './data/pdfs/preconception.txt', 
+  type: 'txt' 
+},
+{ 
+  id: 'nancy-icash-preconception', 
+  label: 'iCaSH NHS - Thinking of Having a Baby', 
+  location: './data/pdfs/thinking-of-having-a-baby.pdf', 
+  type: 'pdf' 
+},
+{ 
+  id: 'nancy-postnatal-delphi', 
+  label: 'Delphi Study - Postnatal Physical Activity Screening', 
+  location: './data/pdfs/postnatal-delphi-study.pdf', 
+  type: 'pdf' 
+},
+{ 
+  id: 'nancy-active-at-home', 
+  label: 'Active at Home - Pregnancy Physical Activity Guide', 
+  location: './data/pdfs/Active At Home.pdf', 
+  type: 'pdf' 
+},
+{ 
+  id: 'nancy-pogp-pelvic-girdle', 
+  label: 'POGP - Pelvic Girdle Pain', 
+  location: './data/pdfs/23697pogppelvic_girdle_pain.pdf', 
+  type: 'pdf' 
+},
+{ 
+  id: 'nancy-pogp-exercise-after-pregnancy', 
+  label: 'POGP - Exercise After Pregnancy', 
+  location: './data/pdfs/pogp_ea_after_pregnancy.pdf', 
+  type: 'pdf' 
+},
+{ 
+  id: 'nancy-pogp-fit-for-pregnancy', 
+  label: 'POGP - Fit for Pregnancy', 
+  location: './data/pdfs/21xxxxpogpffpregnancy_signed_off.pdf', 
+  type: 'pdf' 
+},
 ];
