@@ -18,10 +18,11 @@ export interface UnknownQuestion {
   reviewed?: boolean;
 }
 
+export const UNKNOWN_RESPONSE_SEARCHTEXT =
+  "i don't have specific information on that in my database. please consult your healthcare provider.";
+
 export function isUnknownResponse(responseText: string): boolean {
-  return responseText
-    .toLowerCase()
-    .includes("i don't have specific information on that in my database");
+  return responseText.trim().toLowerCase() === UNKNOWN_RESPONSE_SEARCHTEXT;
 }
 
 async function logToSupabase(

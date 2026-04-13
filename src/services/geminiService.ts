@@ -7,7 +7,7 @@ export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
 }
-
+ 
 export type UserCategory =
   | 'preconception'
   | 'pregnant'
@@ -17,10 +17,15 @@ export type UserCategory =
   | 'other'
   | null;
 
-// ── SYSTEM PROMPT ──────────────────────────────────────────────────────────
-// Nancy is warm, friendly, and personal — but still clinically safe.
-// The category context is injected at call-time so the same function
-// powers all user types while staying appropriately focused.
+const MODEL_CHAIN = [
+  'gemini-2.5-flash-lite',  
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemma-3-27b-it',         
+  'gemma-3-12b-it',     
+  'gemma-3-4b-it', 
+];
 
 function buildSystemInstruction(
   userName: string,
@@ -40,31 +45,32 @@ function buildSystemInstruction(
     other:
       "This user has described a situation that doesn't fit the standard categories. Do your best with available APF resources. Be especially careful to stay within your knowledge base and recommend professional advice when in doubt.",
   };
-
+ 
   const contextLine = category
     ? categoryContext[category]
     : "The user's situation is not yet known. Answer general APF questions only.";
-
+ 
   return `
 You are Nancy — a warm, friendly, and knowledgeable assistant from the Active Pregnancy Foundation (APF).
 You support women and their families with safe, personalised guidance on physical activity before, during, and after pregnancy.
-
+ 
 USER CONTEXT:
 - Name: ${userName || 'the user'}
 - Situation: ${contextLine}
-
+ 
 YOUR PERSONALITY:
 - Speak like a knowledgeable, supportive friend — warm, encouraging, and clear.
 - Use the user's first name occasionally to keep things personal.
 - Avoid cold or clinical language. Replace medical jargon with plain English where possible.
 - Use gentle emoji occasionally (💛 ✨ 😊) but don't overdo it.
 - Keep answers concise and scannable — use short paragraphs, not walls of text.
-
+ 
 STRICT RULES:
 1. ONLY answer using the CONTEXT provided below each question.
-2. If the context does not contain enough information to answer, say EXACTLY:
+2. CRITICAL: If the context does not contain enough information to answer the question fully,
+   you MUST respond with this sentence word-for-word as your ENTIRE response (do not add anything before or after it):
    "I don't have specific information on that in my database. Please consult your healthcare provider."
-   (This exact phrase is used to detect and log unanswered questions — do not paraphrase it.)
+   Do NOT paraphrase it. Do NOT say "I don't have specific information about X" — use the exact phrase above.
 3. Do NOT use any outside knowledge. Do NOT make things up.
 4. Always recommend consulting a GP or midwife for personal medical decisions.
 5. If a user reports a YES to any screening question, clearly advise them to speak to their GP or midwife before resuming physical activity.
@@ -72,7 +78,28 @@ STRICT RULES:
 7. Never diagnose conditions or prescribe specific treatments.
 `.trim();
 }
-
+ 
+// ── TRY A SINGLE MODEL ─────────────────────────────────────────────────────
+async function tryModel(
+  ai: GoogleGenAI,
+  model: string,
+  contents: { role: string; parts: { text: string }[] }[],
+  systemInstruction: string
+): Promise<string> {
+  const response = await ai.models.generateContent({
+    model,
+    contents,
+    config: {
+      systemInstruction,
+      temperature: 0.2,
+    },
+  });
+ 
+  const text = response.text;
+  if (!text) throw new Error(`${model} returned empty response`);
+  return text;
+}
+ 
 // ── MAIN EXPORT ────────────────────────────────────────────────────────────
 export const getGeminiResponse = async (
   history: ChatMessage[],
@@ -80,16 +107,16 @@ export const getGeminiResponse = async (
   category: UserCategory = null
 ): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
-
+ 
   const lastUserMessage = [...history].reverse().find(m => m.role === 'user');
   if (!lastUserMessage) return "Please ask a question.";
-
+ 
   const contexts = await retrieveContext(lastUserMessage.text, 5);
-
+ 
   const contextBlock = contexts.length > 0
     ? contexts.map((c, i) => `[${i + 1}] (${c.sourceLabel})\n${c.text}`).join('\n\n')
     : 'No relevant context found in the APF database.';
-
+ 
   const augmentedHistory = history.map((m, idx) => {
     if (idx === history.length - 1 && m.role === 'user') {
       return {
@@ -99,23 +126,36 @@ export const getGeminiResponse = async (
     }
     return m;
   });
-
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: augmentedHistory.map(m => ({
-        role: m.role,
-        parts: [{ text: m.text }],
-      })),
-      config: {
-        systemInstruction: buildSystemInstruction(userName, category),
-        temperature: 0.2,
-      },
-    });
-
-    return response.text || "I'm having trouble retrieving that information right now. Please try again.";
-  } catch (error) {
-    console.error("Gemini Error:", error);
-    return "I encountered a technical error. Please check your connection and try again.";
+ 
+  const contents = augmentedHistory.map(m => ({
+    role: m.role,
+    parts: [{ text: m.text }],
+  }));
+ 
+  const systemInstruction = buildSystemInstruction(userName, category);
+ 
+  // ── FALLBACK CHAIN ───────────────────────────────────────────────────────
+  // Try each model in order. Move to the next if one fails.
+  const errors: string[] = [];
+ 
+  for (const model of MODEL_CHAIN) {
+    try {
+      console.log(`Trying model: ${model}`);
+      const text = await tryModel(ai, model, contents, systemInstruction);
+      // Log which model was actually used if it wasn't the first choice
+      if (model !== MODEL_CHAIN[0]) {
+        console.warn(`Fell back to model: ${model}`);
+      }
+      return text;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push(`${model}: ${message}`);
+      console.warn(`Model ${model} failed — ${message}`);
+      // Continue to next model
+    }
   }
+ 
+  // All models failed
+  console.error('All models failed:\n' + errors.join('\n'));
+  return "I'm having trouble connecting right now. Please try again in a moment, or contact the APF team directly if the problem persists.";
 };
