@@ -111,8 +111,32 @@ export const getGeminiResponse = async (
   const lastUserMessage = [...history].reverse().find(m => m.role === 'user');
   if (!lastUserMessage) return "Please ask a question.";
  
-  const contexts = await retrieveContext(lastUserMessage.text, 5);
- 
+// ── SAFETY KEYWORD FILTER ─────────────────────────────────────────────────
+const SAFETY_KEYWORDS = [
+  "chest pain", "chest tightness", "heart pain", "palpitations",
+  "shortness of breath", "bleeding", "vaginal bleeding",
+  "amniotic fluid", "waters broke", "dizziness", "dizzy", "faint",
+  "fainting", "lightheaded", "severe pain", "abdominal pain", "pelvic pain",
+  "baby not moving", "no movement", "reduced movement",
+  "blurred vision", "severe headache", "high blood pressure", "high bp","low bp","low blood pressure",
+  "hypertension", "preeclampsia", "gestational diabetes", "diabetes",
+  "epilepsy", "seizure", "heart condition", "heart disease", "cardiac",
+  "blood clot", "cancer", "tumour", "tumor", "thyroid", "kidney disease",
+  "placenta previa", "incompetent cervix", "cerclage", "premature labour",
+  "preterm", "miscarriage", "ectopic", "fell", "fall", "accident",
+  "injured", "fever", "contractions", "labour", "labor",
+  "swollen face", "swollen hands"
+];
+
+const hasSafetyKeyword = SAFETY_KEYWORDS.some(kw =>
+  lastUserMessage.text.toLowerCase().includes(kw)
+);
+
+if (hasSafetyKeyword) {
+  return `⚠️ ${userName ? userName + ', t' : 'T'}hat sounds like something to discuss directly with your GP or midwife — please don't rely on me for personal medical advice. If it's urgent please call NHS 111. 💜`;
+}
+
+const contexts = await retrieveContext(lastUserMessage.text, 5); 
   const contextBlock = contexts.length > 0
     ? contexts.map((c, i) => `[${i + 1}] (${c.sourceLabel})\n${c.text}`).join('\n\n')
     : 'No relevant context found in the APF database.';
