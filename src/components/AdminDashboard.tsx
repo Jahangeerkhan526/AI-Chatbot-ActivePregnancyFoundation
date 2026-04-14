@@ -44,7 +44,7 @@ const LoginScreen: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F0E17] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#081544] flex items-center justify-center p-4">
       <div className={`w-full max-w-sm ${shake ? 'animate-[shake_0.4s_ease]' : ''}`}>
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-lg mb-4">
