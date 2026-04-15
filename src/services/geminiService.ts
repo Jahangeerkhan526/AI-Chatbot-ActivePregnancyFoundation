@@ -27,7 +27,7 @@ const GEMINI_MODEL_CHAIN = [
 
 const SENTINEL = "I don't have specific information on that in my database. Please consult your healthcare provider.";
 
-const MIN_RAG_SCORE = 0;
+const MIN_RAG_SCORE = 4;
 
 function buildSystemInstruction(userName: string, category: UserCategory): string {
   const categoryContext: Record<NonNullable<UserCategory>, string> = {
