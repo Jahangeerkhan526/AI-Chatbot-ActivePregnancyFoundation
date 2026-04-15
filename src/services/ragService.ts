@@ -17,6 +17,7 @@ export interface RetrievedContext {
 }
 
 export async function retrieveContext(query: string, topK = 8): Promise<RetrievedContext[]> {
+
   const allChunks = await getChunks();
 
   const stopWords = new Set([
@@ -35,12 +36,21 @@ export async function retrieveContext(query: string, topK = 8): Promise<Retrieve
   if (queryWords.length === 0) return [];
 
   const scored = allChunks.map(chunk => {
-    const text = chunk.text.toLowerCase();
+    const text  = chunk.text.toLowerCase();
+    const label = chunk.sourceLabel.toLowerCase();
     let score = 0;
+
     for (const word of queryWords) {
-      if (text.includes(word)) score += 2;
+      // Text matches
+      if (text.includes(word))             score += 2;
       if (text.includes(word.slice(0, 4))) score += 1;
+
+      // sourceLabel boost — if the guide name matches the query word
+      // e.g. "yoga" → matches "APF Guide: Yoga During Pregnancy" → +5
+      // This ensures yoga chunks rank above swimming chunks that mention yoga in headers
+      if (label.includes(word))            score += 5;
     }
+
     return { text: chunk.text, sourceLabel: chunk.sourceLabel, score };
   });
 
