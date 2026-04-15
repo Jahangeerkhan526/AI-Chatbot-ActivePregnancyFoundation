@@ -31,7 +31,7 @@ const SENTINEL = "I don't have specific information on that in my database. Plea
 // APF topics (swimming, walking, yoga) score 8-15+
 // Unrelated topics (cricket, mountain) score 2-4
 // Threshold of 6 = at least 3 strong word matches needed
-const MIN_RAG_SCORE = 6;
+const MIN_RAG_SCORE = 2;
 
 function buildSystemInstruction(userName: string, category: UserCategory): string {
   const categoryContext: Record<NonNullable<UserCategory>, string> = {

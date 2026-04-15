@@ -21,12 +21,8 @@ export async function retrieveContext(query: string, topK = 8): Promise<Retrieve
   const allChunks = await getChunks();
 
   // Strip common stop words
-  const stopWords = new Set([
-    'what', 'when', 'where', 'which', 'while', 'that', 'this', 'with',
-    'from', 'they', 'them', 'have', 'will', 'your', 'about', 'can',
-    'the', 'and', 'for', 'are', 'was', 'its', 'you', 'does', 'how',
-    'safe', 'okay', 'during', 'after', 'before', 'while', 'still',
-  ]);
+  const stopWords = new Set(['what', 'when', 'where', 'which', 'while', 'that', 'this', 'with', 'from', 'they', 'them', 'have', 'will', 'your', 'about', 'can', 'the', 'and', 'for', 'are', 'was', 'its']);
+
 
   // Break query into 5-char stems
   const queryWords = query
@@ -46,7 +42,7 @@ export async function retrieveContext(query: string, topK = 8): Promise<Retrieve
       if (text.includes(word)) {
         score += 2; // direct stem match
       }
-      if (text.includes(word.slice(0, 4))) {
+      if (text.includes(word.slice(0, 5))) {
         score += 1; // partial match
       }
     }
