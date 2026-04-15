@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 // src/services/geminiService.ts
 import { GoogleGenAI } from "@google/genai";
+import Groq from 'groq-sdk';
 import { retrieveContext } from "./ragService";
 import { logUnknownQuestion } from "./unknownQuestionsLogger";
 
@@ -26,11 +27,6 @@ const GEMINI_MODEL_CHAIN = [
 
 const SENTINEL = "I don't have specific information on that in my database. Please consult your healthcare provider.";
 
-// RAG score threshold
-// Score = 2pts per stem match + 1pt per partial match
-// APF topics (swimming, walking, yoga) score 8-15+
-// Unrelated topics (cricket, mountain) score 2-4
-// Threshold of 6 = at least 3 strong word matches needed
 const MIN_RAG_SCORE = 0;
 
 function buildSystemInstruction(userName: string, category: UserCategory): string {
@@ -68,6 +64,37 @@ RULES:
 `.trim();
 }
 
+// ── GROQ ──────────────────────────────────────────────────────────────────────
+async function tryGroq(
+  contents: { role: string; parts: { text: string }[] }[],
+  systemInstruction: string
+): Promise<string> {
+  const groqKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!groqKey) throw new Error('No Groq API key');
+
+  const groq = new Groq({ apiKey: groqKey, dangerouslyAllowBrowser: true });
+
+  const messages = [
+    { role: 'system' as const, content: systemInstruction },
+    ...contents.map(c => ({
+      role: c.role === 'model' ? 'assistant' as const : 'user' as const,
+      content: c.parts[0].text,
+    })),
+  ];
+
+  const completion = await groq.chat.completions.create({
+    model: 'llama-3.1-8b-instant',
+    messages,
+    temperature: 0.1,
+    max_tokens: 800,
+  });
+
+  const text = completion.choices[0]?.message?.content;
+  if (!text) throw new Error('Groq returned empty response');
+  return text;
+}
+
+// ── GEMINI ────────────────────────────────────────────────────────────────────
 async function tryGeminiModel(
   ai: GoogleGenAI,
   model: string,
@@ -84,6 +111,7 @@ async function tryGeminiModel(
   return text;
 }
 
+// ── MAIN ──────────────────────────────────────────────────────────────────────
 export const getGeminiResponse = async (
   history: ChatMessage[],
   userName: string = '',
@@ -97,20 +125,63 @@ export const getGeminiResponse = async (
 
   // ── SAFETY KEYWORD FILTER ─────────────────────────────────────────────────
   const SAFETY_KEYWORDS = [
-    "chest pain", "chest tightness", "heart pain", "palpitations",
-    "shortness of breath", "bleeding", "vaginal bleeding",
-    "amniotic fluid", "waters broke", "dizziness", "dizzy", "faint",
-    "fainting", "lightheaded", "severe pain", "abdominal pain", "pelvic pain",
-    "baby not moving", "no movement", "reduced movement",
-    "blurred vision", "severe headache", "high blood pressure", "high bp",
-    "low bp", "low blood pressure", "blood pressure",
-    "hypertension", "preeclampsia", "gestational diabetes", "diabetes",
-    "epilepsy", "seizure", "heart condition", "heart disease", "cardiac",
-    "blood clot", "cancer", "tumour", "tumor", "thyroid", "kidney disease",
-    "placenta previa", "incompetent cervix", "cerclage", "premature labour",
-    "preterm", "miscarriage", "ectopic", "fell", "fall", "accident",
-    "injured", "fever", "contractions", "labour", "labor",
-    "swollen face", "swollen hands"
+    // Chest & heart
+    "chest pain", "chest tightness", "chest pressure", "chest discomfort",
+    "heart pain", "heart racing", "heart pounding", "palpitations",
+    "heart condition", "heart disease", "cardiac",
+
+    // Breathing
+    "shortness of breath", "cant breathe", "can't breathe",
+    "breathing difficulty", "breathless", "out of breath",
+
+    // Bleeding & fluids
+    "bleeding", "vaginal bleeding", "spotting", "blood loss",
+    "amniotic fluid", "waters broke", "waters breaking", "leaking fluid",
+
+    // Dizziness & head
+    "dizziness", "dizzy", "faint", "fainting", "lightheaded", "light headed",
+    "blurred vision", "blurry vision", "seeing spots",
+    "severe headache", "headache", "migraine",
+
+    // Pain
+    "severe pain", "abdominal pain", "stomach pain", "tummy pain",
+    "pelvic pain", "pelvic pressure", "lower back pain", "back pain",
+    "hip pain", "groin pain", "rib pain", "pubic pain",
+    "round ligament pain", "spd pain",
+
+    // Baby movement
+    "baby not moving", "no movement", "reduced movement", "less movement",
+    "baby moving less", "cant feel baby", "can't feel baby",
+
+    // Blood pressure
+    "high blood pressure", "high bp", "low blood pressure", "low bp",
+    "blood pressure", "hypertension", "hypotension",
+    "preeclampsia", "eclampsia",
+    "swollen face", "swollen hands", "swollen feet",
+    "swelling face", "swelling hands", "swelling feet",
+
+    // Conditions
+    "gestational diabetes", "diabetes", "epilepsy", "seizure",
+    "blood clot", "dvt", "cancer", "tumour", "tumor",
+    "thyroid", "kidney disease", "kidney pain",
+    "anaemia", "anemia", "iron deficiency",
+
+    // Pregnancy complications
+    "placenta previa", "placenta praevia", "low placenta",
+    "incompetent cervix", "weak cervix", "cerclage", "cervical stitch",
+    "premature labour", "premature labor", "preterm", "early labour",
+    "contractions", "labour", "labor", "waters",
+
+    // History
+    "miscarriage", "ectopic", "stillbirth", "pregnancy loss",
+
+    // Injury & illness
+    "fell", "fall", "fallen", "accident", "injured", "injury",
+    "fracture", "broken bone", "fever", "infection", "temperature",
+    "vomiting", "hyperemesis", "severe nausea",
+
+    // Mental health
+    "suicidal", "self harm", "postnatal depression", "postpartum depression",
   ];
 
   if (SAFETY_KEYWORDS.some(kw => userText.includes(kw))) {
@@ -120,9 +191,6 @@ export const getGeminiResponse = async (
 
   // ── RAG CONTEXT ───────────────────────────────────────────────────────────
   const contexts = await retrieveContext(lastUserMessage.text, 5);
-
-  // Filter to only HIGH confidence matches using score threshold
-  // This prevents weak/accidental matches (cricket, mountain) from reaching the LLM
   const goodContexts = contexts.filter(c => c.score >= MIN_RAG_SCORE);
 
   console.log(`📚 RAG: ${contexts.length} results, ${goodContexts.length} above threshold (${MIN_RAG_SCORE})`);
@@ -155,7 +223,17 @@ export const getGeminiResponse = async (
 
   const systemInstruction = buildSystemInstruction(userName, category);
 
-  // ── GEMINI FALLBACK CHAIN ─────────────────────────────────────────────────
+  // ── 1. GROQ FIRST (no daily limits) ──────────────────────────────────────
+  try {
+    console.log('Trying Groq: llama-3.1-8b-instant');
+    const text = await tryGroq(contents, systemInstruction);
+    console.log('✅ Groq succeeded');
+    return text;
+  } catch (err) {
+    console.warn('Groq failed → trying Gemini:', err);
+  }
+
+  // ── 2. GEMINI FALLBACK ────────────────────────────────────────────────────
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
   const errors: string[] = [];
 
@@ -172,6 +250,7 @@ export const getGeminiResponse = async (
     }
   }
 
+  // ── 3. ALL FAILED ─────────────────────────────────────────────────────────
   console.error('All models failed:\n' + errors.join('\n'));
   return "I'm having trouble connecting right now. Please try again in a moment, or contact the APF team directly if the problem persists.";
 };
