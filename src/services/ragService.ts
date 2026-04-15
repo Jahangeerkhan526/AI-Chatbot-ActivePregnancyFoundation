@@ -1,4 +1,3 @@
-/// <reference types="vite/client" />
 import type { Chunk } from '../scripts/ingest';
 
 let chunks: Chunk[] | null = null;
@@ -20,11 +19,12 @@ export interface RetrievedContext {
 export async function retrieveContext(query: string, topK = 8): Promise<RetrievedContext[]> {
   const allChunks = await getChunks();
 
-  // Strip common stop words
-  const stopWords = new Set(['what', 'when', 'where', 'which', 'while', 'that', 'this', 'with', 'from', 'they', 'them', 'have', 'will', 'your', 'about', 'can', 'the', 'and', 'for', 'are', 'was', 'its']);
+  const stopWords = new Set([
+    'what', 'when', 'where', 'which', 'while', 'that', 'this', 'with',
+    'from', 'they', 'them', 'have', 'will', 'your', 'about', 'can',
+    'the', 'and', 'for', 'are', 'was', 'its'
+  ]);
 
-
-  // Break query into 5-char stems
   const queryWords = query
     .toLowerCase()
     .replace(/[^a-z\s]/g, '')
@@ -37,21 +37,11 @@ export async function retrieveContext(query: string, topK = 8): Promise<Retrieve
   const scored = allChunks.map(chunk => {
     const text = chunk.text.toLowerCase();
     let score = 0;
-
     for (const word of queryWords) {
-      if (text.includes(word)) {
-        score += 2; // direct stem match
-      }
-      if (text.includes(word.slice(0, 5))) {
-        score += 1; // partial match
-      }
+      if (text.includes(word)) score += 2;
+      if (text.includes(word.slice(0, 4))) score += 1;
     }
-
-    return {
-      text: chunk.text,
-      sourceLabel: chunk.sourceLabel,
-      score,
-    };
+    return { text: chunk.text, sourceLabel: chunk.sourceLabel, score };
   });
 
   return scored
