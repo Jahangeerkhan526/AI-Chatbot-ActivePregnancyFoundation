@@ -15,7 +15,7 @@ interface Question {
   reviewed: boolean;
 }
 
-const ADMIN_PASSWORD = 'Nancy2025!';
+const ADMIN_PASSWORD = 'Nancy2025';
 
 const CAT_STYLE: Record<string, { bg: string; text: string; dot: string; label: string }> = {
   pregnant:      { bg: 'bg-violet-50',  text: 'text-violet-700',  dot: 'bg-violet-400',  label: '🤰 Pregnant' },
