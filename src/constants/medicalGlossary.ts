@@ -87,6 +87,19 @@ export const MEDICAL_GLOSSARY: MedicalTerm[] = [
   { term: 'Umbilical cord', definition: 'The cord that connects a mother\'s blood system with a baby\'s and which is cut after the birth.', source: 'RCOG A-Z of Medical Terms' },
   { term: 'Uterus (womb)', definition: 'The organ where a baby develops during pregnancy. Made of muscle, it is hollow, stretchy and about the size and shape of an upside-down pear.', source: 'RCOG A-Z of Medical Terms' },
   { term: 'Weak cervix', definition: 'When the cervix (the neck of the womb) opens too early in pregnancy, in the second trimester, and without contractions. Previously known as incompetent cervix.', source: 'RCOG A-Z of Medical Terms' },
+
+  { term: "cerclage", definition: "A stitch placed in your cervix to help keep it closed and support your pregnancy.", source: "Saint Mary's Hospital Obstetric Glossary" },
+{ term: "dvt", definition: "A blood clot that forms in a deep vein, usually in the leg. Signs include leg pain, swelling or redness.", source: "RCOG A-Z of Medical Terms" },
+{ term: "hyperemesis", definition: "Severe pregnancy sickness that causes extreme nausea and vomiting, beyond normal morning sickness.", source: "RCOG A-Z of Medical Terms" },
+{ term: "intrauterine growth restriction", definition: "When a baby is not growing at the expected rate inside the womb.", source: "RCOG A-Z of Medical Terms" },
+{ term: "postpartum cardiomyopathy", definition: "A rare heart condition that can develop in the last month of pregnancy or in the months after giving birth.", source: "RCOG A-Z of Medical Terms" },
+{ term: "gestational hypertension", definition: "High blood pressure that develops during pregnancy, usually after 20 weeks.", source: "RCOG A-Z of Medical Terms" },
+
+{ term: "loss of consciousness", definition: "When a person temporarily becomes unaware of their surroundings and cannot respond, sometimes called fainting or passing out.", source: "RCOG A-Z of Medical Terms" },
+{ term: "eating disorder", definition: "A serious condition affecting how a person thinks about food, eating and their body weight or shape.", source: "RCOG A-Z of Medical Terms" },
+{ term: "stroke", definition: "A medical emergency where blood supply to part of the brain is cut off. Signs include face drooping, arm weakness or slurred speech — call 999 immediately.", source: "RCOG A-Z of Medical Terms" },
+{ term: "malnutrition", definition: "When the body does not get enough nutrients it needs to function properly, which can affect your health and recovery.", source: "RCOG A-Z of Medical Terms" },
+
 ];
 
 // Helper: find definition for a term mentioned in user message
