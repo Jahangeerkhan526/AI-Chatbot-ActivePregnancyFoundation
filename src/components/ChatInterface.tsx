@@ -7,6 +7,7 @@ import {
   POSTNATAL_SCREENING_QUESTIONS,
   ScreeningQuestion,
 } from '../../data/screeningQuestions';
+import { findMedicalTerm } from '../constants/medicalGlossary';
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
 type OnboardingStep =
@@ -203,28 +204,42 @@ export const ChatInterface: React.FC = () => {
         answer.toLowerCase().includes('not sure');
 
       if (isYes && question.yesAction === 'refer_immediately') {
-        setUserProfile(prev => ({ ...prev, screeningFlaggedYes: true, screeningComplete: true }));
-        setOnboardingStep('chat');
-        setTimeout(() => {
-          addMessage(
-            nancyMsg(
-              `Thank you for being so honest with me, ${currentProfile.name} 💛\n\nBecause of what you've shared, I'd really encourage you to speak with your **GP or midwife before starting or increasing physical activity** — they're the best people to make sure you're safe.\n\nI've made a note of this. Is there anything else I can help you with in the meantime?`
-            )
-          );
-        }, 400);
-        return;
-      }
+      setUserProfile(prev => ({ ...prev, screeningFlaggedYes: true, screeningComplete: true }));
+      setOnboardingStep('chat');
+
+      // Find medical term in the question text and explain it
+      const glossaryEntry = findMedicalTerm(question.text);
+      const termExplanation = glossaryEntry
+        ? `\n\n📖 Just so you know — **${glossaryEntry.term}** means: ${glossaryEntry.definition} _(${glossaryEntry.source})_`
+        : '';
+
+      setTimeout(() => {
+        addMessage(
+          nancyMsg(
+            `Thank you for being so honest with me, ${currentProfile.name} 💛${termExplanation}\n\nBecause of what you've shared, I'd really encourage you to speak with your **GP or midwife before starting or increasing physical activity** — they're the best people to make sure you're safe.\n\nI've made a note of this. Is there anything else I can help you with in the meantime?`
+          )
+        );
+      }, 400);
+      return;
+    }
 
       const nextIndex = currentIndex + 1;
 
       if (isYes && question.yesAction === 'refer_and_continue') {
         setUserProfile(prev => ({ ...prev, screeningFlaggedYes: true }));
+
+        // Find medical term in the question text
+        const glossaryEntry = findMedicalTerm(question.text);
+        const termExplanation = glossaryEntry
+          ? `\n\n📖 Just so you know — **${glossaryEntry.term}** means: ${glossaryEntry.definition} _(${glossaryEntry.source})_`
+          : '';
+
         setTimeout(() => {
           if (nextIndex < questions.length) {
             setScreeningIndex(nextIndex);
             addMessage(
               nancyMsg(
-                `Thanks for letting me know — I'd recommend mentioning that to your GP or midwife. 💛\n\n${questions[nextIndex].text}`,
+                `Thanks for letting me know — I'd recommend mentioning that to your GP or midwife. 💛${termExplanation}\n\n${questions[nextIndex].text}`,
                 { showYesNo: true }
               )
             );
