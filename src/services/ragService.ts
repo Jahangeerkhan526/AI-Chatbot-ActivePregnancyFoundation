@@ -17,15 +17,12 @@ export interface RetrievedContext {
 }
 
 export async function retrieveContext(query: string, topK = 8): Promise<RetrievedContext[]> {
-
   const allChunks = await getChunks();
 
-  const stopWords = new Set([
-    'what', 'when', 'where', 'which', 'while', 'that', 'this', 'with',
-    'from', 'they', 'them', 'have', 'will', 'your', 'about', 'can',
-    'the', 'and', 'for', 'are', 'was', 'its'
-  ]);
+  // Strip common words that don't help matching
+  const stopWords = new Set(['what', 'when', 'where', 'which', 'while', 'that', 'this', 'with', 'from', 'they', 'them', 'have', 'will', 'your', 'about', 'can', 'the', 'and', 'for', 'are', 'was', 'its']);
 
+  // Break query into root stems (e.g. "running" → "run", "pregnant" → "pregnan")
   const queryWords = query
     .toLowerCase()
     .replace(/[^a-z\s]/g, '')
@@ -35,24 +32,37 @@ export async function retrieveContext(query: string, topK = 8): Promise<Retrieve
 
   if (queryWords.length === 0) return [];
 
-  const scored = allChunks.map(chunk => {
-    const text  = chunk.text.toLowerCase();
-    const label = chunk.sourceLabel.toLowerCase();
-    let score = 0;
+  const scored = allChunks
+    .filter(chunk => {
+      const matches = (chunk.text.match(/YOUR GUIDE TO DURING PREGNANCY AND BEYOND/g) || []).length;
+      return matches < 2;
+    })
+    .map(chunk => {
+      const text = chunk.text.toLowerCase();
+      const label = chunk.sourceLabel.toLowerCase();
+      let score = 0;
 
-    for (const word of queryWords) {
-      // Text matches
-      if (text.includes(word))             score += 2;
-      if (text.includes(word.slice(0, 4))) score += 1;
+      for (const word of queryWords) {
+        // Label matches — weighted heavily so e.g. "yoga" always surfaces yoga chunks first
+        if (label.includes(word)) {
+          score += 10;
+        }
 
-      // sourceLabel boost — if the guide name matches the query word
-      // e.g. "yoga" → matches "APF Guide: Yoga During Pregnancy" → +5
-      // This ensures yoga chunks rank above swimming chunks that mention yoga in headers
-      if (label.includes(word))            score += 5;
-    }
+        // Text matches
+        if (text.includes(word)) {
+          score += 2;
+        }
+        if (text.includes(word.slice(0, 4))) {
+          score += 1;
+        }
+      }
 
-    return { text: chunk.text, sourceLabel: chunk.sourceLabel, score };
-  });
+      return {
+        text: chunk.text,
+        sourceLabel: chunk.sourceLabel,
+        score,
+      };
+    });
 
   return scored
     .filter(c => c.score > 0)

@@ -11,6 +11,8 @@ export interface MedicalTerm {
 }
 
 export const MEDICAL_GLOSSARY: MedicalTerm[] = [
+  { term: "cardiovascular disease", definition: "A general term for conditions affecting the heart or blood vessels, such as heart disease or chronic bronchitis.", source: "RCOG A-Z of Medical Terms" },
+  { term: "ruptured membranes", definition: "When the fluid-filled sac surrounding your baby breaks — sometimes called your waters breaking. This can happen before or during labour.", source: "Saint Mary's Hospital Obstetric Glossary" },
   { term: 'Abdomen', definition: 'The tummy area from the lower ribs to the pelvis.', source: 'RCOG A-Z of Medical Terms' },
   { term: 'Acceleration of labour', definition: 'The speeding up of labour by the use of drugs, usually via a Syntocinon drip.', source: 'Saint Mary\'s Hospital Obstetric Glossary' },
   { term: 'Active labour', definition: 'Also known as the first stage of labour. This is the period after the latent (early) stage of labour when a woman is experiencing strong, regular contractions and her cervix continues to dilate from 4cms until she is fully dilated (10cms).', source: 'Saint Mary\'s Hospital Obstetric Glossary' },
@@ -88,30 +90,69 @@ export const MEDICAL_GLOSSARY: MedicalTerm[] = [
   { term: 'Uterus (womb)', definition: 'The organ where a baby develops during pregnancy. Made of muscle, it is hollow, stretchy and about the size and shape of an upside-down pear.', source: 'RCOG A-Z of Medical Terms' },
   { term: 'Weak cervix', definition: 'When the cervix (the neck of the womb) opens too early in pregnancy, in the second trimester, and without contractions. Previously known as incompetent cervix.', source: 'RCOG A-Z of Medical Terms' },
 
-  { term: "cerclage", definition: "A stitch placed in your cervix to help keep it closed and support your pregnancy.", source: "Saint Mary's Hospital Obstetric Glossary" },
-{ term: "dvt", definition: "A blood clot that forms in a deep vein, usually in the leg. Signs include leg pain, swelling or redness.", source: "RCOG A-Z of Medical Terms" },
-{ term: "hyperemesis", definition: "Severe pregnancy sickness that causes extreme nausea and vomiting, beyond normal morning sickness.", source: "RCOG A-Z of Medical Terms" },
-{ term: "intrauterine growth restriction", definition: "When a baby is not growing at the expected rate inside the womb.", source: "RCOG A-Z of Medical Terms" },
-{ term: "postpartum cardiomyopathy", definition: "A rare heart condition that can develop in the last month of pregnancy or in the months after giving birth.", source: "RCOG A-Z of Medical Terms" },
-{ term: "gestational hypertension", definition: "High blood pressure that develops during pregnancy, usually after 20 weeks.", source: "RCOG A-Z of Medical Terms" },
+  { term: "epilepsy", definition: "A condition affecting the brain that causes repeated seizures or fits. It can usually be well controlled with medication.", source: "RCOG A-Z of Medical Terms" },
+  { term: "thyroid", definition: "A gland in your neck that produces hormones controlling your metabolism and energy levels. Thyroid problems are common and usually manageable with medication.", source: "RCOG A-Z of Medical Terms" },
+  { term: "cerclage", definition: "A stitch placed in the cervix to help keep it closed and support the pregnancy. Also called a cervical stitch.", source: "Saint Mary's Hospital Obstetric Glossary" },
+  { term: "hyperemesis", definition: "Severe pregnancy sickness that causes extreme nausea and vomiting, much worse than normal morning sickness.", source: "RCOG A-Z of Medical Terms" },
+  { term: "postpartum cardiomyopathy", definition: "A rare heart condition that can develop in the last month of pregnancy or in the months after giving birth.", source: "RCOG A-Z of Medical Terms" },
+  { term: "gestational hypertension", definition: "High blood pressure that develops during pregnancy, usually after 20 weeks.", source: "RCOG A-Z of Medical Terms" },
+  { term: "intrauterine growth restriction", definition: "When a baby is not growing at the expected rate inside the womb.", source: "RCOG A-Z of Medical Terms" },
+  { term: "loss of consciousness", definition: "When a person temporarily becomes unaware of their surroundings and cannot respond, sometimes called fainting or passing out.", source: "RCOG A-Z of Medical Terms" },
+  { term: "eating disorder", definition: "A serious condition affecting how a person thinks about food, eating and their body weight or shape.", source: "RCOG A-Z of Medical Terms" },
+  { term: "stroke", definition: "A medical emergency where blood supply to part of the brain is cut off. Signs include face drooping, arm weakness or slurred speech — call 999 immediately.", source: "RCOG A-Z of Medical Terms" },
+  { term: "malnutrition", definition: "When the body does not get enough nutrients it needs to function properly, which can affect your health and recovery.", source: "RCOG A-Z of Medical Terms" },
 
-{ term: "loss of consciousness", definition: "When a person temporarily becomes unaware of their surroundings and cannot respond, sometimes called fainting or passing out.", source: "RCOG A-Z of Medical Terms" },
-{ term: "eating disorder", definition: "A serious condition affecting how a person thinks about food, eating and their body weight or shape.", source: "RCOG A-Z of Medical Terms" },
-{ term: "stroke", definition: "A medical emergency where blood supply to part of the brain is cut off. Signs include face drooping, arm weakness or slurred speech — call 999 immediately.", source: "RCOG A-Z of Medical Terms" },
-{ term: "malnutrition", definition: "When the body does not get enough nutrients it needs to function properly, which can affect your health and recovery.", source: "RCOG A-Z of Medical Terms" },
+{ term: "heart condition", definition: "A general term for any condition that affects how the heart works, including problems with the heart muscle, valves or rhythm.", source: "RCOG A-Z of Medical Terms" },
+{ term: "bleeding", definition: "Any unexpected blood loss during or after pregnancy should always be reported to your midwife or GP immediately.", source: "Saint Mary's Hospital Obstetric Glossary" },
+{ term: "cervical incompetence", definition: "When the cervix is too weak to stay closed during pregnancy, which can sometimes cause early labour. Also called weak cervix.", source: "RCOG A-Z of Medical Terms" },
+{ term: "dvt", definition: "Deep Vein Thrombosis — a blood clot that forms in a deep vein, usually in the leg. Signs include pain, swelling or redness in the leg.", source: "RCOG A-Z of Medical Terms" },
+{ term: "abdominal pain", definition: "Pain or discomfort in the tummy area. During pregnancy or after birth, severe abdominal pain should always be checked by a doctor.", source: "Saint Mary's Hospital Obstetric Glossary" },
+{ term: "kidney", definition: "The kidneys are two organs that filter waste from your blood and produce urine. Kidney disease means they are not working as well as they should.", source: "RCOG A-Z of Medical Terms" },
 
 ];
 
-// Helper: find definition for a term mentioned in user message
+// Clinical terms that appear in screening questions — checked first
+const SCREENING_PRIORITY_TERMS = [
+  'placenta praevia',
+  'placenta praevia',
+  'incompetent cervix',
+  'weak cervix',
+  'postpartum cardiomyopathy',
+  'intrauterine growth restriction',  // ← for baby growth question
+  'gestational hypertension',
+  'deep vein thrombosis',
+  'loss of consciousness',
+  'eating disorder',                   // ← missing!
+  'pre-eclampsia',
+  'eclampsia',
+  'cerclage',
+  'hyperemesis',
+  'malnutrition',
+  'miscarriage',
+  'preterm',
+  'anaemia',
+  'thyroid',
+  'diabetes',
+  'epilepsy',
+  'stroke',
+  'dvt',
+  'pelvic girdle pain',
+];
+
 export function findMedicalTerm(text: string): MedicalTerm | null {
   const lower = text.toLowerCase();
-  // Try exact match first
+
+  // 1. Check priority clinical terms first (exact match)
+  for (const priority of SCREENING_PRIORITY_TERMS) {
+    if (lower.includes(priority)) {
+      const found = MEDICAL_GLOSSARY.find(t => t.term.toLowerCase() === priority);
+      if (found) return found;
+    }
+  }
+
+  // 2. Try exact match against full glossary
   const exact = MEDICAL_GLOSSARY.find(t => lower.includes(t.term.toLowerCase()));
   if (exact) return exact;
-  // Try partial match (first word of term)
-  const partial = MEDICAL_GLOSSARY.find(t => {
-    const firstWord = t.term.toLowerCase().split(' ')[0];
-    return firstWord.length > 4 && lower.includes(firstWord);
-  });
-  return partial ?? null;
+
+  return null;
 }

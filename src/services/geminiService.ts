@@ -30,66 +30,45 @@ const SENTINEL = "I don't have specific information on that in my database. Plea
 
 const MIN_RAG_SCORE = 4;
 
-// ── AUTO-GENERATE SAFETY KEYWORDS FROM GLOSSARY ───────────────────────────────
-// All 76 glossary terms become safety keywords automatically
-// Plus extra clinical terms not in the glossary
+// ── AUTO-GENERATE SAFETY KEYWORDS FROM GLOSSARY ───────────────────────────
 const GLOSSARY_KEYWORDS = MEDICAL_GLOSSARY.map(t => t.term.toLowerCase());
 
 const EXTRA_SAFETY_KEYWORDS = [
-  // Chest & heart
   "chest pain", "chest tightness", "chest pressure", "chest discomfort",
   "heart pain", "heart racing", "heart pounding",
   "heart disease", "cardiac",
-
-  // Breathing
   "shortness of breath", "cant breathe", "can't breathe",
   "breathing difficulty", "breathless", "out of breath",
-
-  // Bleeding & fluids
   "bleeding", "vaginal bleeding", "spotting", "blood loss",
   "waters broke", "waters breaking", "leaking fluid",
-
-  // Dizziness & head
   "dizzy", "faint", "fainting", "lightheaded", "light headed",
   "blurred vision", "blurry vision", "seeing spots",
   "severe headache", "headache", "migraine",
-
-  // Pain
   "severe pain", "stomach pain", "tummy pain",
   "pelvic pressure", "lower back pain", "back pain",
   "hip pain", "groin pain", "rib pain", "pubic pain",
   "round ligament pain", "spd pain",
-
-  // Baby movement
   "baby not moving", "no movement", "reduced movement", "less movement",
   "baby moving less", "cant feel baby", "can't feel baby",
-
-  // Blood pressure
   "high blood pressure", "high bp", "low blood pressure", "low bp",
   "swollen face", "swollen hands", "swollen feet",
   "swelling face", "swelling hands", "swelling feet",
-
-  // Conditions
   "anemia", "iron deficiency", "blood clot",
   "tumour", "tumor", "cancer", "thyroid", "kidney pain",
   "cervical stitch", "low placenta",
   "premature labour", "premature labor", "early labour",
   "contractions", "labour", "labor", "waters",
   "pregnancy loss",
-
-  // Injury & illness
   "fell", "fall", "fallen", "accident", "injured", "injury",
   "fracture", "broken bone", "fever", "infection",
   "vomiting", "severe nausea",
-
-  // Mental health
   "suicidal", "self harm",
   "postnatal depression", "postpartum depression",
 ];
 
 const ALL_SAFETY_KEYWORDS = [...new Set([...GLOSSARY_KEYWORDS, ...EXTRA_SAFETY_KEYWORDS])];
 
-// ── SYSTEM INSTRUCTION ────────────────────────────────────────────────────────
+// ── SYSTEM INSTRUCTION ────────────────────────────────────────────────────
 function buildSystemInstruction(userName: string, category: UserCategory): string {
   const categoryContext: Record<NonNullable<UserCategory>, string> = {
     preconception: "This user is thinking of becoming pregnant. Focus on preconception physical activity guidance from APF resources.",
@@ -125,25 +104,7 @@ RULES:
 `.trim();
 }
 
-// ── TERM EXPLANATION SYSTEM INSTRUCTION ──────────────────────────────────────
-function buildTermExplainInstruction(userName: string): string {
-  return `
-You are Nancy — a warm, friendly assistant from the Active Pregnancy Foundation (APF).
-Your job is to explain a medical term in plain English using the definition provided,
-then warmly advise the user to speak to their GP or midwife before any physical activity.
-
-RULES:
-1. Explain the term in 1-2 sentences using ONLY the definition provided. Do not add extra medical information.
-2. Use warm, friendly, plain English — like a knowledgeable friend explaining something.
-3. After explaining, advise them to speak to their GP or midwife.
-4. If it sounds urgent, mention NHS 111.
-5. Use the user's name if provided.
-6. Never diagnose. Never prescribe. Never suggest treatments.
-7. Keep the whole response to 3-4 sentences maximum.
-`.trim();
-}
-
-// ── GROQ ──────────────────────────────────────────────────────────────────────
+// ── GROQ ──────────────────────────────────────────────────────────────────
 async function tryGroq(
   contents: { role: string; parts: { text: string }[] }[],
   systemInstruction: string
@@ -173,7 +134,7 @@ async function tryGroq(
   return text;
 }
 
-// ── GEMINI ────────────────────────────────────────────────────────────────────
+// ── GEMINI ────────────────────────────────────────────────────────────────
 async function tryGeminiModel(
   ai: GoogleGenAI,
   model: string,
@@ -190,34 +151,42 @@ async function tryGeminiModel(
   return text;
 }
 
-// ── LLM CALL (Groq first, Gemini fallback) ────────────────────────────────────
-async function callLLM(
-  contents: { role: string; parts: { text: string }[] }[],
-  systemInstruction: string
+// ── EXPLAIN MEDICAL TERM (exported for ChatInterface Not Sure flow) ────────
+export async function explainMedicalTerm(
+  term: string,
+  definition: string,
+  source: string,
+  userName: string = ''
 ): Promise<string> {
-  // Try Groq first
-  try {
-    const text = await tryGroq(contents, systemInstruction);
-    return text;
-  } catch (err) {
-    console.warn('Groq failed → Gemini:', err);
-  }
+  const prompt = `The user selected "Not sure" when asked about "${term}" in a pregnancy health screening.
 
-  // Gemini fallback
-  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
-  for (const model of GEMINI_MODEL_CHAIN) {
+  Definition from ${source}: "${definition}"
+
+  Please explain what "${term}" means in 1-2 warm, friendly sentences using ONLY this definition.
+  Use plain English — like a knowledgeable friend explaining something.
+  ${userName ? `Address the user as ${userName}.` : ''}
+  Do NOT add medical advice. Do NOT suggest treatments. Keep it under 3 sentences total.
+  At the end of your explanation, always add: (Source: ${source})`;
+
+    const systemInstruction = `You are Nancy, a warm friendly assistant from the Active Pregnancy Foundation. 
+  Explain medical terms in plain English using only the definition provided. Keep responses short and warm.`;
+
+    const contents = [{ role: 'user', parts: [{ text: prompt }] }];
+
+  try {
+    return await tryGroq(contents, systemInstruction);
+  } catch {
     try {
-      const text = await tryGeminiModel(ai, model, contents, systemInstruction);
-      return text;
-    } catch (err) {
-      console.warn(`Gemini ${model} failed`);
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
+      return await tryGeminiModel(ai, 'gemini-2.5-flash', contents, systemInstruction);
+    } catch {
+      // Fallback — return raw definition
+      return `No worries! **${term}** means: ${definition} _(Source: ${source})_`;
     }
   }
-
-  throw new Error('All models failed');
 }
 
-// ── MAIN EXPORT ───────────────────────────────────────────────────────────────
+// ── MAIN EXPORT ───────────────────────────────────────────────────────────
 export const getGeminiResponse = async (
   history: ChatMessage[],
   userName: string = '',
@@ -229,48 +198,46 @@ export const getGeminiResponse = async (
 
   const userText = lastUserMessage.text.toLowerCase();
 
-  // ── SAFETY KEYWORD CHECK ──────────────────────────────────────────────────
+  // ── SAFETY KEYWORD CHECK ──────────────────────────────────────────────
   const matchedKeyword = ALL_SAFETY_KEYWORDS.find(kw => userText.includes(kw));
 
   if (matchedKeyword) {
     await logUnknownQuestion(lastUserMessage.text, category ?? 'unknown', userName ?? 'unknown');
 
-    // Try to find a glossary definition for the matched term
     const glossaryEntry = findMedicalTerm(userText);
 
     if (glossaryEntry) {
-      // We have a definition — ask LLM to explain it warmly then refer to GP
       console.log(`📖 Found glossary term: "${glossaryEntry.term}" (${glossaryEntry.source})`);
+      const explainPrompt = `The user ${userName ? `(${userName}) ` : ''}mentioned the medical term: "${glossaryEntry.term}"
 
-      const explainPrompt = `
-The user ${userName ? `(${userName}) ` : ''}mentioned the medical term: "${glossaryEntry.term}"
-
-Definition from ${glossaryEntry.source}:
-"${glossaryEntry.definition}"
+Definition from ${glossaryEntry.source}: "${glossaryEntry.definition}"
 
 Using ONLY this definition, please:
 1. Explain what "${glossaryEntry.term}" means in 1-2 warm, plain English sentences
 2. Advise them to speak to their GP or midwife before any physical activity
-3. If it sounds urgent or serious, mention NHS 111 as well
-`;
+3. If it sounds urgent or serious, mention NHS 111 as well`;
+
+      const systemInstruction = `You are Nancy, a warm friendly assistant from the Active Pregnancy Foundation.
+Explain medical terms in plain English using only the definition provided. Keep responses short, warm and supportive.`;
 
       try {
         const contents = [{ role: 'user', parts: [{ text: explainPrompt }] }];
-        const systemInstruction = buildTermExplainInstruction(userName);
-        const explanation = await callLLM(contents, systemInstruction);
-        return explanation;
-      } catch (err) {
-        console.warn('LLM failed for term explanation, using fallback');
-        // Fallback if LLM fails
-        return `⚠️ Just so you know — "${glossaryEntry.term}" means: ${glossaryEntry.definition} (Source: ${glossaryEntry.source})\n\nBecause of this, please speak to your GP or midwife before doing any physical activity. If you need urgent help, call NHS 111. Take care of yourself! 💜`;
+        return await tryGroq(contents, systemInstruction);
+      } catch {
+        try {
+          const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
+          const contents = [{ role: 'user', parts: [{ text: explainPrompt }] }];
+          return await tryGeminiModel(ai, 'gemini-2.5-flash', contents, systemInstruction);
+        } catch {
+          return `⚠️ Just so you know — "${glossaryEntry.term}" means: ${glossaryEntry.definition} (Source: ${glossaryEntry.source})\n\nPlease speak to your GP or midwife before doing any physical activity. If you need urgent help, call NHS 111. 💜`;
+        }
       }
     }
 
-    // No glossary entry — use standard safety message
     return `⚠️ ${userName ? userName + ', t' : 'T'}hat's really important to get checked out properly. I'm not able to give personal medical advice on that, but please speak to your GP or midwife — they'll give you the right guidance for your situation. If you need urgent help, call NHS 111. Take care of yourself! 💜`;
   }
 
-  // ── RAG CONTEXT ───────────────────────────────────────────────────────────
+  // ── RAG CONTEXT ───────────────────────────────────────────────────────
   const contexts = await retrieveContext(lastUserMessage.text, 5);
   const goodContexts = contexts.filter(c => c.score >= MIN_RAG_SCORE);
 
@@ -304,7 +271,7 @@ Using ONLY this definition, please:
 
   const systemInstruction = buildSystemInstruction(userName, category);
 
-  // ── CALL LLM ──────────────────────────────────────────────────────────────
+  // ── 1. GROQ FIRST ────────────────────────────────────────────────────
   try {
     console.log('Trying Groq: llama-3.1-8b-instant');
     const text = await tryGroq(contents, systemInstruction);
@@ -314,6 +281,7 @@ Using ONLY this definition, please:
     console.warn('Groq failed → trying Gemini:', err);
   }
 
+  // ── 2. GEMINI FALLBACK ────────────────────────────────────────────────
   const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
   const errors: string[] = [];
 
